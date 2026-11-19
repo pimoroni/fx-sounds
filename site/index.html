@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mighty FX Sounds</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --ground: #f4f3ef;
+    --card: #ffffff;
+    --ink: #1c1b19;
+    --muted: #6b6862;
+    --line: #dedbd3;
+    --accent: #c8322b;
+    --accent-ink: #ffffff;
+    --trace: #c8322b;
+    scroll-behavior: smooth;
+
+    @media (prefers-color-scheme: dark) {
+      --ground: #141413;
+      --card: #1e1e1c;
+      --ink: #eeece6;
+      --muted: #9c998f;
+      --line: #34332f;
+      --accent: #ff5a4f;
+      --accent-ink: #141413;
+      --trace: #ff7a70;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      scroll-behavior: auto;
+    }
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 0 16px 64px;
+    background: var(--ground);
+    color: var(--ink);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+    & > * {
+      max-width: 1180px;
+      margin-inline: auto;
+    }
+
+    & > header {
+      padding-block: 48px 24px;
+
+      & h1 {
+        margin: 0 0 8px;
+        font-size: clamp(28px, 5vw, 44px);
+        letter-spacing: -0.02em;
+      }
+
+      & p {
+        margin: 0 0 16px;
+        color: var(--muted);
+        max-width: 64ch;
+      }
+
+      & a[download] {
+        display: inline-block;
+        padding: 10px 18px;
+        border-radius: 6px;
+        background: var(--accent);
+        color: var(--accent-ink);
+        font-weight: 600;
+        text-decoration: none;
+      }
+    }
+
+    & > nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: var(--ground);
+      border-bottom: 1px solid var(--line);
+
+      & ul {
+        display: flex;
+        gap: 6px;
+        margin: 0;
+        padding: 10px 0;
+        list-style: none;
+        overflow-x: auto;
+        scrollbar-width: none;
+
+        &::-webkit-scrollbar {
+          display: none;
+        }
+      }
+
+      & li {
+        flex: none;
+      }
+
+      & a {
+        display: block;
+        padding: 4px 12px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        color: var(--ink);
+        font-size: 13px;
+        text-decoration: none;
+        white-space: nowrap;
+
+        &:hover {
+          border-color: var(--muted);
+        }
+
+        &[aria-current="true"] {
+          background: var(--ink);
+          border-color: var(--ink);
+          color: var(--card);
+        }
+      }
+    }
+
+    & > footer {
+      margin-top: 48px;
+      padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+
+      & a {
+        color: inherit;
+      }
+    }
+  }
+
+  main {
+    & h2 {
+      margin: 40px 0 16px;
+      font-size: 20px;
+    }
+
+    & section {
+      scroll-margin-top: 24px;
+    }
+
+    & > p[role="alert"] {
+      color: var(--accent);
+    }
+
+    & section > ul {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+      gap: 16px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+  }
+
+  article {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+
+    &:has(button[aria-pressed="true"]) {
+      border-color: var(--accent);
+
+      & figure::after {
+        display: block;
+      }
+    }
+
+    & figure {
+      position: relative;
+      margin: 0;
+      --position: 0;
+
+      &::after {
+        content: "";
+        display: none;
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: calc(var(--position) * 100%);
+        width: 2px;
+        background: #ffffff;
+        box-shadow: 0 0 4px #000000;
+        pointer-events: none;
+      }
+    }
+
+    & img {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 4 / 1;
+      background: #000004;
+    }
+
+    & svg {
+      display: block;
+      width: 100%;
+      height: 44px;
+      color: var(--trace);
+      border-top: 1px solid var(--line);
+    }
+
+    & figcaption {
+      position: absolute;
+      right: 6px;
+      bottom: 4px;
+      padding: 0 4px;
+      border-radius: 3px;
+      background: var(--card);
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    & > header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      padding: 12px 14px 0;
+
+      & h3 {
+        margin: 0;
+        font-size: 14px;
+        word-break: break-all;
+      }
+
+      & p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        white-space: nowrap;
+      }
+    }
+
+    & > p {
+      flex: 1;
+      margin: 10px 14px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    & > footer {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 0 14px 14px;
+    }
+
+    & button,
+    & label {
+      font: inherit;
+      font-size: 14px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+
+    & button {
+      min-width: 72px;
+      border-radius: 6px;
+      font-weight: 600;
+
+      &[aria-pressed="true"] {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-ink);
+      }
+    }
+
+    & fieldset {
+      display: inline-flex;
+      margin: 0;
+      padding: 0;
+      border: 0;
+
+      & legend {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+      }
+
+      & input {
+        position: absolute;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      & label:first-of-type {
+        border-radius: 6px 0 0 6px;
+      }
+
+      & label:last-of-type {
+        border-radius: 0 6px 6px 0;
+        border-left: none;
+      }
+
+      & label:has(input:checked) {
+        background: var(--ink);
+        border-color: var(--ink);
+        color: var(--card);
+      }
+
+      & label:has(input:focus-visible) {
+        outline: 2px solid var(--accent);
+        outline-offset: 2px;
+      }
+    }
+
+    & footer ul {
+      display: flex;
+      gap: 10px;
+      margin: 0 0 0 auto;
+      padding: 0;
+      list-style: none;
+      font-size: 13px;
+
+      & a {
+        color: var(--muted);
+      }
+    }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mighty FX Sounds</h1>
+  <p>Seamless sirens, sci-fi sounders, smoke alarms, sizzling fires, spluttering engines and soothing soundscapes. Every sound loops seamlessly and comes dry or with reverb.</p>
+  <p><a href="mighty-fx-sounds.zip" download>Download the whole pack (.zip)</a></p>
+  <p><small>Spectrograms show the whole loop, 40 Hz to 16 kHz on a log scale. The trace below each shows 20 ms of the loudest part.</small></p>
+</header>
+<nav aria-label="Sections">
+  <ul></ul>
+</nav>
+<main></main>
+<footer>
+  <p>Sounds are <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0</a>. Code is MIT.</p>
+</footer>
+
+<template>
+  <li>
+    <article>
+      <figure>
+        <img loading="lazy" width="640" height="160" alt="">
+        <figcaption>20 ms</figcaption>
+      </figure>
+      <header>
+        <h3><code></code></h3>
+        <p><time></time> loop</p>
+      </header>
+      <p></p>
+      <footer>
+        <button type="button" aria-pressed="false">Play</button>
+        <fieldset>
+          <legend>Mix</legend>
+          <label><input type="radio" value="dry">Dry</label>
+          <label><input type="radio" value="wet" checked>Wet</label>
+        </fieldset>
+        <ul>
+          <li><a download>dry.wav</a></li>
+          <li><a download>wet.wav</a></li>
+        </ul>
+      </footer>
+    </article>
+  </li>
+</template>
+
+<script>
+  const groupTitles = {
+    uk: "UK emergency",
+    us: "US emergency",
+    scifi: "Sci-fi",
+    alarms: "Alarms",
+    fire: "Fire",
+    civil: "Civil defence",
+    rail: "Railway",
+    maritime: "Maritime",
+    signals: "Signals",
+    phones: "Telephone tones",
+    engines: "Engines",
+    ambience: "Ambience",
+    roomtone: "Room tone",
+  };
+
+  let audioContext = null;
+  const buffers = new Map();
+  let current = null;
+  let latestRequest = 0;
+
+  function selectedMix(article) {
+    return article.querySelector("fieldset input:checked").value;
+  }
+
+  async function loadBuffer(url) {
+    if (!buffers.has(url)) {
+      buffers.set(url, fetch(url)
+        .then(response => response.arrayBuffer())
+        .then(data => audioContext.decodeAudioData(data)));
+    }
+    return buffers.get(url);
+  }
+
+  function stopCurrent() {
+    latestRequest++;
+    if (!current) return;
+    current.source.stop();
+    const button = current.article.querySelector("button");
+    button.setAttribute("aria-pressed", "false");
+    button.textContent = "Play";
+    current = null;
+  }
+
+  async function startPlayback(article, sound, offset) {
+    const request = ++latestRequest;
+    const buffer = await loadBuffer("sounds/" + sound[selectedMix(article)]);
+    if (request !== latestRequest) return;
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    source.connect(audioContext.destination);
+    source.start(0, offset % buffer.duration);
+    current = { article, source, startedAt: audioContext.currentTime - offset, duration: buffer.duration };
+    const button = article.querySelector("button");
+    button.setAttribute("aria-pressed", "true");
+    button.textContent = "Stop";
+    requestAnimationFrame(animate);
+  }
+
+  function animate() {
+    if (!current) return;
+    const position = ((audioContext.currentTime - current.startedAt) % current.duration) / current.duration;
+    current.article.querySelector("figure").style.setProperty("--position", position);
+    requestAnimationFrame(animate);
+  }
+
+  async function togglePlay(article, sound) {
+    audioContext = audioContext || new AudioContext();
+    if (audioContext.state === "suspended") await audioContext.resume();
+    const wasThis = current && current.article === article;
+    stopCurrent();
+    if (!wasThis) await startPlayback(article, sound, 0);
+  }
+
+  async function changeMix(article, sound) {
+    await showScope(article, sound);
+    if (current && current.article === article) {
+      const offset = audioContext.currentTime - current.startedAt;
+      stopCurrent();
+      await startPlayback(article, sound, offset);
+    }
+  }
+
+  async function showScope(article, sound) {
+    const response = await fetch("sounds/" + sound[selectedMix(article) + "_scope"]);
+    const parsed = new DOMParser().parseFromString(await response.text(), "image/svg+xml");
+    const svg = document.importNode(parsed.documentElement, true);
+    svg.setAttribute("aria-hidden", "true");
+    const figure = article.querySelector("figure");
+    const previous = figure.querySelector("svg");
+    if (previous) {
+      previous.replaceWith(svg);
+    } else {
+      figure.querySelector("img").after(svg);
+    }
+  }
+
+  function makeEntry(sound) {
+    const entry = document.querySelector("template").content.firstElementChild.cloneNode(true);
+    const article = entry.querySelector("article");
+
+    const image = article.querySelector("img");
+    image.src = "sounds/" + sound.spectrogram;
+    image.alt = "Spectrogram of " + sound.name;
+    article.querySelector("h3 code").textContent = sound.name;
+    const length = article.querySelector("time");
+    length.dateTime = "PT" + sound.length.toFixed(2) + "S";
+    length.textContent = sound.length.toFixed(2) + " s";
+    article.querySelector(":scope > p").textContent = sound.description;
+
+    const [dryLink, wetLink] = article.querySelectorAll("footer ul a");
+    dryLink.href = "sounds/" + sound.dry;
+    wetLink.href = "sounds/" + sound.wet;
+
+    article.querySelector("button").addEventListener("click", () => togglePlay(article, sound));
+    article.querySelectorAll("fieldset input").forEach(input => {
+      input.name = "mix-" + sound.name;
+      input.addEventListener("change", () => changeMix(article, sound));
+    });
+
+    showScope(article, sound);
+    return entry;
+  }
+
+  function trackActiveSection(links, headings) {
+    let active = null;
+    const update = () => {
+      let found = headings[0];
+      for (const heading of headings) {
+        if (heading.getBoundingClientRect().top < 120) found = heading;
+      }
+      if (found === active) return;
+      active = found;
+      links.forEach(link => {
+        if (link.hash === "#" + active.parentElement.id) {
+          link.setAttribute("aria-current", "true");
+          link.scrollIntoView({ block: "nearest", inline: "nearest" });
+        } else {
+          link.removeAttribute("aria-current");
+        }
+      });
+    };
+    window.addEventListener("scroll", update, { passive: true });
+    update();
+  }
+
+  async function build() {
+    const main = document.querySelector("main");
+    const navList = document.querySelector("body > nav ul");
+    try {
+      const sounds = await (await fetch("sounds/sounds.json")).json();
+      const groups = new Map();
+      for (const sound of sounds) {
+        if (!groups.has(sound.group)) groups.set(sound.group, []);
+        groups.get(sound.group).push(sound);
+      }
+
+      const links = [];
+      const headings = [];
+      for (const group of Object.keys(groupTitles).concat([...groups.keys()])) {
+        if (!groups.has(group)) continue;
+        const title = groupTitles[group] || group;
+
+        const section = document.createElement("section");
+        section.id = group;
+        section.setAttribute("aria-labelledby", group + "-heading");
+        const heading = document.createElement("h2");
+        heading.id = group + "-heading";
+        heading.textContent = title;
+        const list = document.createElement("ul");
+        groups.get(group).forEach(sound => list.appendChild(makeEntry(sound)));
+        section.append(heading, list);
+        main.appendChild(section);
+        headings.push(heading);
+
+        const item = document.createElement("li");
+        const link = document.createElement("a");
+        link.href = "#" + group;
+        link.textContent = title;
+        item.appendChild(link);
+        navList.appendChild(item);
+        links.push(link);
+
+        groups.delete(group);
+      }
+
+      trackActiveSection(links, headings);
+      const target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+      if (target) target.scrollIntoView({ behavior: "instant" });
+    } catch (error) {
+      const message = document.createElement("p");
+      message.setAttribute("role", "alert");
+      message.textContent = "Could not load sounds/sounds.json.";
+      main.appendChild(message);
+    }
+  }
+
+  build();
+</script>
+</body>
+</html>
