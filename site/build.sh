@@ -10,7 +10,7 @@ ctest --test-dir "$root/build" --output-on-failure
 
 rm -rf "$site"
 mkdir -p "$site/sounds"
-"$root/build/sirensynth" -p -o "$site/sounds" "$root"/presets/*.ini
+"$root/build/fx-sounds" -p -o "$site/sounds" "$root"/presets/*.ini
 cp "$root/site/index.html" "$site/"
 cp "$root/LICENSE-SOUNDS" "$site/sounds/"
-(cd "$site/sounds" && zip -q -X ../mighty-fx-sounds.zip ./*.wav LICENSE-SOUNDS)
+(cd "$site/sounds" && zip -q -X ../fx-sounds.zip ./*.wav LICENSE-SOUNDS)

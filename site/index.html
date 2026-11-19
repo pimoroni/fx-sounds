@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mighty FX Sounds</title>
+<title>FX Sounds</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -62,6 +62,10 @@
         margin: 0 0 16px;
         color: var(--muted);
         max-width: 64ch;
+
+        & a:not([download]) {
+          color: var(--ink);
+        }
       }
 
       & a[download] {
@@ -339,9 +343,9 @@
 </head>
 <body>
 <header>
-  <h1>Mighty FX Sounds</h1>
-  <p>Seamless sirens, sci-fi sounders, smoke alarms, sizzling fires, spluttering engines and soothing soundscapes. Every sound loops seamlessly and comes dry or with reverb.</p>
-  <p><a href="mighty-fx-sounds.zip" download>Download the whole pack (.zip)</a></p>
+  <h1>FX Sounds</h1>
+  <p>Seamless sirens, sci-fi sounders, smoke alarms, sizzling fires, spluttering engines and soothing soundscapes. Every sound loops seamlessly and comes dry or with reverb. Made for use with <a href="https://shop.pimoroni.com/collections/tiny-fx">Tiny FX</a> and <a href="https://shop.pimoroni.com/collections/yukon">Yukon</a>.</p>
+  <p><a href="fx-sounds.zip" download>Download the whole pack (.zip)</a></p>
   <p><small>Spectrograms show the whole loop, 40 Hz to 16 kHz on a log scale. The trace below each shows 20 ms of the loudest part.</small></p>
 </header>
 <nav aria-label="Sections">
@@ -392,6 +396,7 @@
     maritime: "Maritime",
     signals: "Signals",
     phones: "Telephone tones",
+    electric: "Electricity",
     engines: "Engines",
     ambience: "Ambience",
     roomtone: "Room tone",

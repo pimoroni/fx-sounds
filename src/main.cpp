@@ -16,7 +16,7 @@ namespace fs = std::filesystem;
 int usage()
 {
     std::fprintf(stderr,
-                 "usage: sirensynth [-o outdir] [-s sound]... [-p] patches.ini...\n"
+                 "usage: fx-sounds [-o outdir] [-s sound]... [-p] patches.ini...\n"
                  "  -o outdir  output directory (default: out)\n"
                  "  -s sound   only render the named sound, may be repeated\n"
                  "  -p         also write preview images and sounds.json\n");

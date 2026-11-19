@@ -1,6 +1,8 @@
-# sirensynth
+# FX Sounds
 
 Synthesises seamless sirens, sci-fi sounders, smoke alarms, sizzling fires, spluttering engines and soothing soundscapes from simple text patches. Each sound is written as a dry and a wet (reverb) 16-bit mono WAV with a `smpl` loop chunk covering the whole file.
+
+Made for use with [Tiny FX](https://shop.pimoroni.com/collections/tiny-fx) and [Yukon](https://shop.pimoroni.com/collections/yukon).
 
 ## Build
 
@@ -13,8 +15,8 @@ ctest --test-dir build
 ## Usage
 
 ```sh
-./build/sirensynth -o out presets/*.ini
-./build/sirensynth -o out -s us_wail -s uk_two_tone presets/us.ini presets/uk.ini
+./build/fx-sounds -o out presets/*.ini
+./build/fx-sounds -o out -s us_wail -s uk_two_tone presets/us.ini presets/uk.ini
 ```
 
 Writes `out/<name>_dry.wav` and `out/<name>_wet.wav`. `-p` also writes a spectrogram PNG, 20 ms scope SVGs and `sounds.json` for the gallery.
@@ -42,6 +44,7 @@ python3 -m http.server -d _site
 | `presets/scifi.ini` | red alert, klaxon, dive alarm, warble, evacuate, self destruct, teleporter, tractor beam, computer |
 | `presets/alarms.ini` | smoke alarm, US T3 fire horn, UK fire sounder, reversing beeper, car alarm |
 | `presets/fire.ini` | campfire, blaze |
+| `presets/electric.ini` | arc buzz, sparks, Jacob's ladder, singing Tesla coil, electric fence |
 | `presets/engines.ini` | diesel idle, V8 idle, fire truck, starship, helicopter |
 | `presets/ambience.ini` | rain, bubbles, stream, waterfall, desert wind, desert night, research facility, cafe, sea waves, thunderstorm, forest birds, city traffic |
 | `presets/roomtone.ini` | 50 Hz and 60 Hz mains hum, fluorescent tube, server room |
