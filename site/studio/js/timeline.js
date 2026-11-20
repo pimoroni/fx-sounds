@@ -122,7 +122,7 @@ export function createAutomationEditor({ label, nodes, baseline, length, format,
   return svg;
 }
 
-export function createClipEditor({ name, hits, clipLength, length, looping, wrapping, onChange }) {
+export function createClipEditor({ name, hits, clipLength, length, looping, wrapping, peaks = null, onChange }) {
   const svg = svgElement("svg", { role: "group", "aria-label": `${name} placements` });
   let placements = hits.slice();
   let size = { width: 1, height: 1 };
@@ -134,11 +134,25 @@ export function createClipEditor({ name, hits, clipLength, length, looping, wrap
     return snap(((event.clientX - bounds.left) / bounds.width) * length);
   };
 
+  function shape(x, width) {
+    const middle = size.height / 2;
+    const reach = (size.height - 16) / 2;
+    const upper = peaks.map((peak, index) => `${x + (index / (peaks.length - 1)) * width},${middle - peak * reach}`);
+    const lower = peaks.map((peak, index) => `${x + (index / (peaks.length - 1)) * width},${middle + peak * reach}`).reverse();
+    return svgElement("path", { d: `M${upper.join(" L")} L${lower.join(" L")} Z`, "data-part": "shape", "aria-hidden": "true" });
+  }
+
   function draw() {
     size = { width: svg.clientWidth || 1, height: svg.clientHeight || 1 };
     svg.setAttribute("viewBox", `0 0 ${size.width} ${size.height}`);
     svg.replaceChildren();
     const width = Math.max(4, (clipLength / length) * size.width);
+    const withShape = (element, x) => {
+      svg.append(element);
+      if (peaks) {
+        svg.append(shape(x, width));
+      }
+    };
     const starts = looping && placements.length ? [] : placements;
     if (looping && placements.length) {
       const first = placements[0];
@@ -156,12 +170,12 @@ export function createClipEditor({ name, hits, clipLength, length, looping, wrap
       const x = (start / length) * size.width;
       const block = svgElement("rect", { x, y: 6, width, height: size.height - 12, rx: 4 });
       if (wrapping && x + width > size.width) {
-        svg.append(svgElement("rect", { x: x - size.width, y: 6, width, height: size.height - 12, rx: 4, "aria-hidden": "true" }));
+        withShape(svgElement("rect", { x: x - size.width, y: 6, width, height: size.height - 12, rx: 4, "aria-hidden": "true" }), x - size.width);
       }
       if (!primary) {
         block.setAttribute("aria-hidden", "true");
         block.setAttribute("data-part", "repeat");
-        svg.append(block);
+        withShape(block, x);
         return;
       }
       const index = placements.indexOf(start);
@@ -189,7 +203,7 @@ export function createClipEditor({ name, hits, clipLength, length, looping, wrap
         }
         event.preventDefault();
       });
-      svg.append(block);
+      withShape(block, x);
     });
   }
 
@@ -234,6 +248,7 @@ export function createClipEditor({ name, hits, clipLength, length, looping, wrap
     update(options) {
       clipLength = options.clipLength ?? clipLength;
       length = options.length ?? length;
+      peaks = options.peaks ?? peaks;
       draw();
     },
   };

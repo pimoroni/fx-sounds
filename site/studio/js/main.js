@@ -1,7 +1,7 @@
-import { templates, templateById, mixerControls } from "./templates.js";
+import { templates, templateById, mixerControls, filterUses } from "./templates.js";
 import { buildPatch, controlValues, soundName, automationAt, loopsCleanly, nodeCount } from "./patch.js";
 import { renderPatch } from "./engine.js";
-import { mixProject, sampleRate, limit, normalise } from "./mixer.js";
+import { mixProject, sampleRate, limit, normalise, peakOf } from "./mixer.js";
 import { Player } from "./player.js";
 import { drawSpectrum, drawWaveform, drawOverview, themeColours } from "./visualiser.js";
 import { createAutomationEditor, createClipEditor } from "./timeline.js";
@@ -9,7 +9,7 @@ import { saveRecord, listRecords, getRecord, deleteRecord } from "./store.js";
 import { encodeWav } from "./wav.js";
 
 const maximumLayers = 4;
-const lengthLimits = { loop: [0.5, 30], evolve: [5, 120] };
+const lengthRange = [0.5, 120];
 const clipGroupTitles = {
   clips: "Clips",
   uk: "UK emergency",
@@ -32,6 +32,8 @@ const elements = {
   body: document.body,
   form: document.querySelector("#project-form"),
   name: document.querySelector("#project-name"),
+  heading: document.querySelector("#project-heading"),
+  rename: document.querySelector("#rename"),
   length: document.querySelector("#project-length"),
   fadeIn: document.querySelector("#fade-in"),
   fadeOut: document.querySelector("#fade-out"),
@@ -43,6 +45,7 @@ const elements = {
   overview: document.querySelector("#overview"),
   overviewCanvas: document.querySelector("#overview canvas"),
   status: document.querySelector("#status"),
+  position: document.querySelector("#position"),
   layers: document.querySelector("#layers"),
   layersHint: document.querySelector("#layers-hint"),
   spectrum: document.querySelector("#spectrum"),
@@ -88,11 +91,7 @@ function restoredProject() {
 }
 
 function emptyProject() {
-  return { name: "Untitled", mode: "loop", length: 8, loop: true, fadeIn: 0, fadeOut: 0, layers: [] };
-}
-
-function evolving() {
-  return project.mode === "evolve";
+  return { name: "Untitled", length: 8, loop: true, fadeIn: 0, fadeOut: 0, layers: [] };
 }
 
 function previewOversampling() {
@@ -105,9 +104,6 @@ function exportOversampling() {
 
 function renderPlan() {
   const timeline = project.length;
-  if (!evolving()) {
-    return { evolving: false, looping: true, timeline, length: timeline, crossfade: 0 };
-  }
   if (!project.loop) {
     return { evolving: true, looping: false, timeline, length: timeline, crossfade: 0 };
   }
@@ -141,10 +137,10 @@ function idleStatus() {
   }
   const plan = renderPlan();
   const mode = !plan.looping
-    ? "evolving one-shot"
+    ? "one-shot"
     : plan.crossfade
-      ? `evolving loop, crossfaded over ${plan.crossfade.toFixed(1)} s because some curves end differently from how they start`
-      : plan.evolving ? "evolving seamless loop" : "seamless loop";
+      ? `loop, crossfaded over ${plan.crossfade.toFixed(1)} s because some curves end differently from how they start`
+      : "seamless loop";
   setStatus(`${count} ${count === 1 ? "layer" : "layers"}, ${project.length.toFixed(1)} s ${mode}.`);
 }
 
@@ -156,7 +152,7 @@ function automatableControls(layer) {
   const own = layer.kind === "synth"
     ? templateById(layer.template).controls.filter(control => control.automatable !== false)
     : [];
-  return [...own, ...mixerControls];
+  return [...own, ...mixerControls.filter(control => control.automatable !== false)];
 }
 
 function formatControl(control, value) {
@@ -198,6 +194,7 @@ function addSynthLayer(templateId, saved = null) {
     variation: saved?.variation ?? 1,
     values: { ...mixerDefaults(), ...controlValues(template), ...(saved?.values ?? {}) },
     automation: structuredClone(saved?.automation ?? {}),
+    parked: structuredClone(saved?.parked ?? {}),
     muted: false,
     solo: false,
   };
@@ -242,6 +239,55 @@ function layerFromRecord(record) {
   return { template: record.template, variation: record.variation, values: record.values, automation: record.automation };
 }
 
+function trimClip({ dry, wet }) {
+  let peak = 0;
+  for (const sample of dry) {
+    peak = Math.max(peak, Math.abs(sample));
+  }
+  if (peak === 0) {
+    return { dry, wet };
+  }
+  const threshold = peak * 0.003;
+  const first = dry.findIndex(sample => Math.abs(sample) > threshold);
+  const last = dry.findLastIndex(sample => Math.abs(sample) > threshold);
+  const tail = Math.round(1.0 * sampleRate);
+  const start = Math.max(0, first - Math.round(0.005 * sampleRate));
+  const end = Math.min(dry.length, last + tail);
+  if (end - start > dry.length * 0.95) {
+    return { dry, wet };
+  }
+  const fade = Math.max(1, end - last);
+  const cut = samples => {
+    const trimmed = samples.slice(start, end);
+    for (let index = 0; index < fade; index++) {
+      trimmed[trimmed.length - 1 - index] *= index / fade;
+    }
+    return trimmed;
+  };
+  return { dry: cut(dry), wet: cut(wet) };
+}
+
+function peaksOf(samples, bins = 64) {
+  const peaks = [];
+  let loudest = 0;
+  for (let bin = 0; bin < bins; bin++) {
+    let peak = 0;
+    const start = Math.floor((bin / bins) * samples.length);
+    const end = Math.floor(((bin + 1) / bins) * samples.length);
+    for (let index = start; index < end; index++) {
+      peak = Math.max(peak, Math.abs(samples[index]));
+    }
+    peaks.push(peak);
+    loudest = Math.max(loudest, peak);
+  }
+  return peaks.map(peak => (loudest > 0 ? peak / loudest : 0));
+}
+
+function finishClip(clip) {
+  const trimmed = trimClip(clip);
+  return { ...trimmed, peaks: peaksOf(trimmed.wet) };
+}
+
 async function fetchClip(source) {
   if (source.type === "gallery") {
     const [dry, wet] = await Promise.all(["dry", "wet"].map(async mix => {
@@ -251,15 +297,15 @@ async function fetchClip(source) {
       }
       return player.decode(await response.arrayBuffer());
     }));
-    return { dry, wet };
+    return finishClip({ dry, wet });
   }
   const record = await getRecord("sounds", source.id);
   if (!record) {
     throw new Error("That saved sound no longer exists");
   }
-  const patch = buildPatch(layerFromRecord(record), { length: record.length, oversampling: 4, evolving: record.mode === "evolve" });
+  const patch = buildPatch(layerFromRecord(record), { length: record.length, oversampling: 4, evolving: true });
   const [sound] = await renderPatch(patch);
-  return { dry: sound.dry, wet: sound.wet };
+  return finishClip({ dry: sound.dry, wet: sound.wet });
 }
 
 function loadClip(source) {
@@ -327,9 +373,19 @@ async function ensurePreview(layer, oversampling) {
   }
   const clip = await loadClip(layer.source);
   previews.set(layer.id, { key: clipKey(layer.source), ...clip });
-  const clipLength = clip.dry.length / sampleRate;
-  views.get(layer.id)?.clipEditor?.update({ clipLength, length: project.length });
-  layerStatus(layer, `${clipLength.toFixed(2)} s clip`);
+  const naturalLength = clip.dry.length / sampleRate;
+  const view = views.get(layer.id);
+  view?.clipEditor?.update({ clipLength: clipLength(layer, clip), length: project.length, peaks: clip.peaks });
+  if (view?.trimInput) {
+    view.trimInput.max = naturalLength.toFixed(2);
+    view.trimInput.value = clipLength(layer, clip).toFixed(2);
+  }
+  layerStatus(layer, `${naturalLength.toFixed(2)} s clip${layer.trim ? `, cut to ${layer.trim.toFixed(2)} s` : ""}`);
+}
+
+function clipLength(layer, clip) {
+  const natural = clip.dry.length / sampleRate;
+  return layer.trim ? Math.min(natural, layer.trim) : natural;
 }
 
 function scheduleRender(delay = 250) {
@@ -376,10 +432,23 @@ function remix() {
     }
   }
   const plan = renderPlan();
-  mixed = limit(mixProject(project, previews, plan));
+  const full = mixProject(project, previews, plan);
+  const reference = peakOf(full) || 1;
+  mixed = limit(full);
   player.setSamples(mixed, plan.looping);
   drawOverview(elements.overviewCanvas, mixed, colours);
+  for (const view of views.values()) {
+    const layer = { ...view.layer, muted: false, solo: false };
+    view.waveform = { samples: mixProject({ ...project, layers: [layer] }, previews, plan), gain: 1 / reference };
+    drawLayerWaveform(view);
+  }
   idleStatus();
+}
+
+function drawLayerWaveform(view) {
+  if (view.waveform) {
+    drawOverview(view.article.querySelector('[data-role="waveform"] canvas'), view.waveform.samples, colours, view.waveform.gain);
+  }
 }
 
 function renderLayers() {
@@ -434,8 +503,8 @@ function controlField(view, control, onChange) {
   if (control.automatable !== false) {
     const toggle = document.createElement("button");
     toggle.type = "button";
-    toggle.textContent = "Automate";
-    toggle.dataset.evolve = "";
+    toggle.append(icon("tune"));
+    toggle.title = "Automate";
     toggle.setAttribute("aria-pressed", "false");
     toggle.setAttribute("aria-label", `Automate ${control.label} on the timeline`);
     toggle.addEventListener("click", () => toggleAutomation(view, control));
@@ -447,8 +516,13 @@ function controlField(view, control, onChange) {
 
 function toggleAutomation(view, control) {
   const { layer } = view;
+  layer.parked ??= {};
   if (layer.automation[control.id]) {
+    layer.parked[control.id] = layer.automation[control.id];
     delete layer.automation[control.id];
+  } else if (layer.parked[control.id]) {
+    layer.automation[control.id] = layer.parked[control.id];
+    delete layer.parked[control.id];
   } else {
     const start = control.kind === "choice" ? choicePosition(control, layer.values[control.id]) : layer.values[control.id];
     layer.automation[control.id] = Array(nodeCount).fill(start);
@@ -478,8 +552,14 @@ function showAutomatedValue(field, nodes, time) {
 function refreshControlStates(view) {
   const time = automationTime();
   for (const field of view.fields) {
-    const nodes = evolving() ? view.layer.automation[field.control.id] : null;
-    field.input.disabled = Boolean(nodes);
+    const id = field.control.id;
+    const unused = id.startsWith("filter") && id !== "filter" && !filterUses(Number(view.layer.values.filter ?? 0), id);
+    const nodes = view.layer.automation[id];
+    field.input.disabled = Boolean(nodes) || unused;
+    if (field.toggle) {
+      field.toggle.disabled = unused;
+    }
+    field.item.toggleAttribute("data-unused", unused);
     field.toggle?.setAttribute("aria-pressed", String(Boolean(view.layer.automation[field.control.id])));
     if (nodes) {
       showAutomatedValue(field, nodes, time);
@@ -527,6 +607,7 @@ function buildLayerView(layer) {
   const article = fragment.querySelector("article");
   const view = { layer, article, fields: [] };
   views.set(layer.id, view);
+  new ResizeObserver(() => drawLayerWaveform(view)).observe(article.querySelector('[data-role="waveform"] canvas'));
 
   if (layer.kind === "synth") {
     const template = templateById(layer.template);
@@ -547,6 +628,19 @@ function buildLayerView(layer) {
   } else {
     article.querySelector("h3").textContent = layer.name;
     const loop = article.querySelector('[data-role="loop"]');
+    const trim = article.querySelector('[data-role="trim"]');
+    view.trimInput = trim;
+    trim.addEventListener("change", () => {
+      const clip = previews.get(layer.id);
+      const natural = clip ? clip.dry.length / sampleRate : Infinity;
+      const value = Math.max(0.05, Number(trim.value) || natural);
+      layer.trim = value >= natural - 0.001 ? null : value;
+      if (clip) {
+        view.clipEditor.update({ clipLength: clipLength(layer, clip) });
+        layerStatus(layer, `${natural.toFixed(2)} s clip${layer.trim ? `, cut to ${layer.trim.toFixed(2)} s` : ""}`);
+      }
+      remix();
+    });
     const fadeIn = article.querySelector('[data-role="fade-in"]');
     const fadeOut = article.querySelector('[data-role="fade-out"]');
     loop.checked = layer.loop;
@@ -569,10 +663,15 @@ function buildLayerView(layer) {
       remix();
     });
     const preview = previews.get(layer.id);
+    if (preview) {
+      trim.max = (preview.dry.length / sampleRate).toFixed(2);
+      trim.value = clipLength(layer, preview).toFixed(2);
+    }
     view.clipEditor = createClipEditor({
       name: layer.name,
       hits: layer.hits,
-      clipLength: preview ? preview.dry.length / sampleRate : 1,
+      clipLength: preview ? clipLength(layer, preview) : 1,
+      peaks: preview?.peaks ?? null,
       length: project.length,
       looping: layer.loop,
       wrapping: renderPlan().looping && !renderPlan().crossfade,
@@ -587,15 +686,20 @@ function buildLayerView(layer) {
 
   const mixList = document.createElement("ul");
   article.querySelector('[data-group="mix"]').append(mixList);
+  const filterList = document.createElement("ul");
+  article.querySelector('[data-group="filter"]').append(filterList);
   for (const control of mixerControls) {
     const field = controlField(view, control, () => {
       scheduleRemix();
+      if (control.id === "filter") {
+        refreshControlStates(view);
+      }
       if (layer.focus === control.id && !layer.automation[control.id]) {
         buildAutomation(view);
       }
     });
     view.fields.push(field);
-    mixList.append(field.item);
+    (control.id.startsWith("filter") ? filterList : mixList).append(field.item);
   }
 
   const focus = article.querySelector('[data-role="focus"]');
@@ -635,6 +739,7 @@ async function layerAction(view, action, button) {
     scheduleRender(0);
   } else if (action === "flatten") {
     delete layer.automation[layer.focus];
+    delete layer.parked?.[layer.focus];
     buildAutomation(view);
     refreshControlStates(view);
     if (mixerControls.some(control => control.id === layer.focus)) {
@@ -651,12 +756,29 @@ async function layerAction(view, action, button) {
         variation: layer.variation,
         values: { ...layer.values },
         automation: structuredClone(layer.automation),
-        mode: project.mode,
+        parked: structuredClone(layer.parked ?? {}),
         length: project.length,
         created: Date.now(),
       });
       setStatus(`Saved ${name} to My sounds.`);
       refreshSaved();
+    }
+  } else if (action === "export") {
+    const name = layer.kind === "synth" ? templateById(layer.template).name : layer.name;
+    button.disabled = true;
+    layerStatus(layer, "Rendering at full quality…");
+    try {
+      const plan = renderPlan();
+      const source = layer.kind === "synth" ? await renderSynthSource(layer, exportOversampling(), null) : await loadClip(layer.source);
+      const solo = { ...project, layers: [{ ...layer, muted: false, solo: false }] };
+      const samples = normalise(mixProject(solo, new Map([[layer.id, source]]), plan));
+      const filename = `${slug(project.name)}-${slug(name)}.wav`;
+      download(encodeWav(samples, sampleRate, plan.looping), filename);
+      layerStatus(layer, `Exported ${filename}.`);
+    } catch (error) {
+      layerStatus(layer, `Export failed: ${error.message}`);
+    } finally {
+      button.disabled = false;
     }
   } else if (action === "patch") {
     const patch = buildPatch(layer, renderSettings(exportOversampling()));
@@ -723,21 +845,18 @@ async function exportWav() {
 
 function syncForm() {
   elements.name.value = project.name;
+  showName();
   elements.length.value = project.length;
   elements.fadeIn.value = project.fadeIn;
   elements.fadeOut.value = project.fadeOut;
-  const [minimum, maximum] = lengthLimits[project.mode];
-  elements.length.min = minimum;
-  elements.length.max = maximum;
-  elements.form.elements.mode.value = project.mode;
+  [elements.length.min, elements.length.max] = lengthRange;
   elements.loopPlayback.checked = project.loop;
-  elements.fadeIn.disabled = project.loop;
-  elements.fadeOut.disabled = project.loop;
-  elements.body.dataset.mode = project.mode;
+  elements.fadeIn.closest("label").hidden = project.loop;
+  elements.fadeOut.closest("label").hidden = project.loop;
 }
 
 function setLength(value) {
-  const [minimum, maximum] = lengthLimits[project.mode];
+  const [minimum, maximum] = lengthRange;
   project.length = Math.round(Math.min(maximum, Math.max(minimum, Number(value) || minimum)) * 10) / 10;
   elements.length.value = project.length;
 }
@@ -749,6 +868,7 @@ function stopPlayback() {
 function openProject(saved) {
   stopPlayback();
   Object.assign(project, emptyProject(), structuredClone(saved));
+  delete project.mode;
   for (const layer of project.layers) {
     layer.id = nextLayerId++;
   }
@@ -762,13 +882,67 @@ function openProject(saved) {
 function projectSnapshot() {
   return structuredClone({
     name: project.name,
-    mode: project.mode,
     length: project.length,
     loop: project.loop,
     fadeIn: project.fadeIn,
     fadeOut: project.fadeOut,
     layers: project.layers,
   });
+}
+
+function icon(name) {
+  const symbol = document.createElement("span");
+  symbol.dataset.icon = "";
+  symbol.setAttribute("aria-hidden", "true");
+  symbol.textContent = name;
+  return symbol;
+}
+
+let previewing = null;
+
+function stopPreview() {
+  if (!previewing) {
+    return;
+  }
+  const { button, node } = previewing;
+  previewing = null;
+  node?.stop();
+  button.setAttribute("aria-pressed", "false");
+  button.querySelector("[data-icon]").textContent = "play_arrow";
+}
+
+async function togglePreview(button, source) {
+  const same = previewing?.button === button;
+  stopPreview();
+  if (same) {
+    return;
+  }
+  previewing = { button };
+  button.setAttribute("aria-pressed", "true");
+  button.querySelector("[data-icon]").textContent = "stop";
+  try {
+    const clip = await loadClip(source);
+    if (previewing?.button !== button) {
+      return;
+    }
+    const context = player.ensureContext();
+    await context.resume();
+    const buffer = context.createBuffer(1, clip.wet.length, sampleRate);
+    buffer.copyToChannel(clip.wet, 0);
+    const node = context.createBufferSource();
+    node.buffer = buffer;
+    node.connect(player.analyser);
+    node.addEventListener("ended", () => {
+      if (previewing?.node === node) {
+        stopPreview();
+      }
+    });
+    node.start();
+    previewing.node = node;
+  } catch (error) {
+    stopPreview();
+    setStatus(`Preview failed: ${error.message}`);
+  }
 }
 
 function paletteItem(title, description, actions) {
@@ -782,17 +956,25 @@ function paletteItem(title, description, actions) {
     item.append(text);
   }
   const menu = document.createElement("menu");
-  for (const [label, handler, adds] of actions) {
+  for (const [label, handler, adds, symbol] of actions) {
     const entry = document.createElement("li");
     const button = document.createElement("button");
     button.type = "button";
-    button.textContent = label;
+    if (symbol) {
+      button.append(icon(symbol));
+      button.title = label;
+    } else {
+      button.textContent = label;
+    }
     button.setAttribute("aria-label", `${label}: ${title}`);
+    if (symbol === "play_arrow") {
+      button.setAttribute("aria-pressed", "false");
+    }
     if (adds) {
       button.dataset.add = "";
       button.disabled = project.layers.length >= maximumLayers;
     }
-    button.addEventListener("click", handler);
+    button.addEventListener("click", () => handler(button));
     entry.append(button);
     menu.append(entry);
   }
@@ -819,7 +1001,7 @@ function buildTemplatePalette() {
     if (!groups.has(template.group)) {
       groups.set(template.group, []);
     }
-    groups.get(template.group).push(paletteItem(template.name, template.description, [["Add", () => addSynthLayer(template.id), true]]));
+    groups.get(template.group).push(paletteItem(template.name, template.description, [["Add", () => addSynthLayer(template.id), true, "add"]]));
   }
   [...groups].forEach(([title, items], index) => elements.templateGroups.append(paletteGroup(title, items, index === 0)));
 }
@@ -834,8 +1016,10 @@ async function buildClipPalette() {
         groups.set(sound.group, []);
       }
       const name = prettyName(sound.name.replace(/^clip_/, ""));
+      const source = { type: "gallery", file: sound.name };
       groups.get(sound.group).push(paletteItem(name, sound.description, [
-        ["Add", () => addClipLayer({ type: "gallery", file: sound.name }, name), true],
+        ["Preview", button => togglePreview(button, source), false, "play_arrow"],
+        ["Add", () => addClipLayer(source, name), true, "add"],
       ]));
     }
     const order = Object.keys(clipGroupTitles).concat([...groups.keys()]);
@@ -856,17 +1040,18 @@ async function refreshSaved() {
     const sounds = await listRecords("sounds");
     elements.savedSounds.replaceChildren(...sounds.map(record => {
       const template = templateById(record.template);
-      const description = `${template?.name ?? record.template}, ${record.mode === "evolve" ? "evolving" : "loop"}, ${record.length.toFixed(1)} s`;
+      const description = `${template?.name ?? record.template}, ${record.length.toFixed(1)} s`;
       return paletteItem(record.name, description, [
-        ["Add as layer", () => addSynthLayer(record.template, record), true],
-        ["Add as clip", () => addClipLayer({ type: "saved", id: record.id }, record.name), true],
+        ["Preview", button => togglePreview(button, { type: "saved", id: record.id }), false, "play_arrow"],
+        ["Add as layer", () => addSynthLayer(record.template, record), true, "layers"],
+        ["Add as clip", () => addClipLayer({ type: "saved", id: record.id }, record.name), true, "music_note"],
         ["Delete", async () => {
           if (confirm(`Delete ${record.name}?`)) {
             await deleteRecord("sounds", record.id);
             clipSources.delete(`saved:${record.id}`);
             refreshSaved();
           }
-        }],
+        }, false, "delete"],
       ]);
     }));
     if (!sounds.length) {
@@ -880,13 +1065,13 @@ async function refreshSaved() {
       record.name,
       `${record.project.layers.length} layers, ${record.project.length.toFixed(1)} s`,
       [
-        ["Open", () => openProject(record.project)],
+        ["Open", () => openProject(record.project), false, "folder_open"],
         ["Delete", async () => {
           if (confirm(`Delete ${record.name}?`)) {
             await deleteRecord("projects", record.id);
             refreshSaved();
           }
-        }],
+        }, false, "delete"],
       ],
     )));
     if (!projects.length) {
@@ -907,7 +1092,8 @@ function frame() {
   drawWaveform(elements.waveform, playing ? player.analyser : null, colours);
   const position = playing && player.buffer ? player.position / player.buffer.duration : 0;
   elements.body.style.setProperty("--position", position);
-  if (evolving() && playing) {
+  elements.position.textContent = `${(position * project.length).toFixed(1)} / ${project.length.toFixed(1)} s`;
+  if (playing) {
     const time = automationTime();
     for (const view of views.values()) {
       for (const field of view.fields) {
@@ -923,19 +1109,46 @@ function frame() {
 }
 
 elements.form.addEventListener("submit", event => event.preventDefault());
-elements.name.addEventListener("input", () => {
-  project.name = elements.name.value;
+function showName() {
+  elements.heading.textContent = project.name;
+}
+
+function editName(editing) {
+  elements.heading.hidden = editing;
+  elements.rename.hidden = editing;
+  elements.name.hidden = !editing;
+  if (editing) {
+    elements.name.value = project.name;
+    elements.name.focus();
+    elements.name.select();
+  } else {
+    elements.rename.focus();
+  }
+}
+
+elements.rename.addEventListener("click", () => editName(true));
+function commitName() {
+  if (elements.name.hidden) {
+    return;
+  }
+  project.name = elements.name.value.trim() || "Untitled";
+  showName();
+  editName(false);
   persist();
+}
+
+elements.name.addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    commitName();
+  } else if (event.key === "Escape") {
+    elements.name.value = project.name;
+    commitName();
+  }
 });
+elements.name.addEventListener("blur", commitName);
 elements.form.addEventListener("change", event => {
   const target = event.target;
-  if (target.name === "mode") {
-    project.mode = target.value;
-    syncForm();
-    setLength(project.length);
-    renderLayers();
-    scheduleRender(0);
-  } else if (target === elements.length) {
+  if (target === elements.length) {
     setLength(target.value);
     renderLayers();
     scheduleRender(0);
@@ -975,6 +1188,7 @@ elements.saveProject.addEventListener("click", async () => {
   if (name) {
     project.name = name;
     elements.name.value = name;
+    showName();
     await saveRecord("projects", { name, project: projectSnapshot(), created: Date.now() });
     setStatus(`Saved ${name} to My projects.`);
     refreshSaved();

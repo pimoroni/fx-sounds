@@ -101,7 +101,7 @@ export function drawWaveform(canvas, analyser, colours) {
   context.stroke();
 }
 
-export function drawOverview(canvas, samples, colours) {
+export function drawOverview(canvas, samples, colours, gain = 1) {
   const { context, width, height } = prepare(canvas);
   if (!samples || samples.length === 0) {
     return;
@@ -117,6 +117,6 @@ export function drawOverview(canvas, samples, colours) {
       low = Math.min(low, samples[index]);
       high = Math.max(high, samples[index]);
     }
-    context.fillRect(x, middle - high * middle, 1, Math.max(1, (high - low) * middle));
+    context.fillRect(x, middle - high * gain * middle, 1, Math.max(1, (high - low) * gain * middle));
   }
 }

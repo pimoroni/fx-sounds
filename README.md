@@ -23,14 +23,15 @@ Writes `out/<name>_dry.wav` and `out/<name>_wet.wav`. `-p` also writes a spectro
 
 ## Studio
 
-`site/studio/` is a browser sound designer built on the same engine, compiled to WebAssembly. Start from a palette of synthesised sounds (water, rain, wind, traffic, cafe, engine, fire and more), layer up to four sounds and clips, and either:
+`site/studio/` is a browser sound designer built on the same engine, compiled to WebAssembly. Start from a palette of synthesised sounds (water, rain, wind, traffic, cafe, engine, fire and more) and gallery clips, then layer up to four of them.
 
-- **Looping:** set the controls and length, export a seamless WAV with loop points.
-- **Evolving:** press Automate next to any control, volume or reverb, then drag nodes on the timeline to change it over time. Choices such as engine cylinders blend between renders. Place clips, fade in and out, export a WAV.
+- Press Automate next to any control to shape it over time on the timeline. Choices such as engine cylinders blend between renders. Turning automation off keeps the curve for later.
+- Each layer has volume, reverb and a low, high or band pass filter, all automatable, plus mute and solo.
+- Clips are trimmed to their sound, can be cut shorter, looped and faded, and placed anywhere on the timeline.
+- Projects loop seamlessly when every curve ends where it starts, otherwise the loop is crossfaded. Untick Loop for a one-shot with fades.
+- Export the mix, or a single layer, as a WAV with loop points. Synth layers can also be downloaded as a `.ini` patch for the CLI.
 
-Evolving timelines loop seamlessly when every curve ends where it starts; otherwise the loop is crossfaded. Untick Loop for a one-shot with fades.
-
-The current project is kept across page reloads. Sounds and projects can be saved in the browser (IndexedDB). Each synth layer can be downloaded as a `.ini` patch for the CLI.
+The current project is kept across page reloads. Sounds and projects can be saved in the browser (IndexedDB).
 
 ## Gallery
 

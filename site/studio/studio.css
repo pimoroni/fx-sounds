@@ -42,9 +42,6 @@ body {
     cursor: progress;
   }
 
-  &[data-mode="loop"] [data-evolve] {
-    display: none !important;
-  }
 
   & > header {
     grid-area: header;
@@ -102,9 +99,19 @@ body {
       font-size: 18px;
     }
 
+    & > section + section {
+      margin-top: 20px;
+      padding-top: 14px;
+      border-top: 2px solid var(--line);
+    }
+
     & h3 {
-      margin: 16px 0 2px;
-      font-size: 15px;
+      margin: 12px 0 2px;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
 
     & section > p {
@@ -130,8 +137,7 @@ body {
       }
     }
 
-    & li li,
-    & section > ul > li:not(:has(details)) {
+    & :is(details > ul, section > ul) > li:not(:has(details)) {
       display: grid;
       grid-template-columns: 1fr auto;
       align-items: center;
@@ -154,8 +160,7 @@ body {
       & menu {
         grid-column: 2;
         grid-row: 1 / span 2;
-        flex-direction: column;
-        align-items: stretch;
+        flex-wrap: nowrap;
       }
     }
   }
@@ -206,6 +211,35 @@ input[type="number"] {
   width: 5.5em;
 }
 
+[data-icon] {
+  display: inline-block;
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  direction: ltr;
+  font-feature-settings: "liga";
+  font-variation-settings: "FILL" 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+button:has([data-icon]) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 4px;
+}
+
+button[aria-pressed="true"] [data-icon] {
+  font-variation-settings: "FILL" 1;
+}
+
 button {
   cursor: pointer;
 
@@ -244,32 +278,104 @@ input[type="range"] {
   outline-offset: 2px;
 }
 
-#project-form {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  margin-bottom: 10px;
-
-  & fieldset {
+main > section:first-child {
+  & > header {
     display: flex;
-    gap: 12px;
-    margin: 0;
-    padding: 0;
-    border: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
 
-    & legend {
-      float: left;
-      margin-right: 8px;
+    & h2 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 400;
+      overflow-wrap: anywhere;
+    }
+
+    & #rename {
+      border-color: transparent;
+      background: transparent;
       color: var(--muted);
+
+      &:hover {
+        color: var(--ink);
+      }
+    }
+
+    & #project-name {
+      font-size: 18px;
+      width: min(100%, 20em);
+    }
+
+    & menu {
+      margin-left: auto;
     }
   }
 
-  & label {
+  & > section {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+
+    & menu {
+      gap: 12px;
+    }
+
+    & #position {
+      color: var(--muted);
+      font-size: 14px;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+}
+
+#project-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 20px;
+
+  & > label,
+  & > fieldset {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  & > label > span:first-child,
+  & legend {
+    padding: 0;
+    color: var(--muted);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  & fieldset {
+    & legend {
+      margin-bottom: 4px;
+    }
+
+    & label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-right: 12px;
+      min-height: 32px;
+    }
+  }
+
+  & > label > span:last-child:not(:first-child) {
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    min-height: 32px;
   }
+
 }
 
 figure {
@@ -292,6 +398,7 @@ figure {
 }
 
 #overview,
+[data-role="waveform"],
 [data-role="automation"],
 [data-role="placements"] {
   &::after {
@@ -307,7 +414,7 @@ figure {
   }
 }
 
-[data-playing] :is(#overview, [data-role="automation"], [data-role="placements"])::after {
+[data-playing] :is(#overview, [data-role="waveform"], [data-role="automation"], [data-role="placements"])::after {
   display: block;
 }
 
@@ -318,6 +425,18 @@ figure {
 [data-role="placements"]::after {
   bottom: auto;
   height: 56px;
+}
+
+[data-role="waveform"] {
+  margin: 0 0 8px;
+
+  & canvas {
+    height: 48px;
+  }
+}
+
+article:has([data-action="mute"][aria-pressed="true"]) [data-role="waveform"] canvas {
+  opacity: 0.35;
 }
 
 #layers {
@@ -348,18 +467,58 @@ article {
 
     & p {
       flex: 1;
+      min-width: 12em;
       margin: 0;
       color: var(--muted);
       font-size: 13px;
     }
 
     & menu {
-      flex-basis: 100%;
+      margin-left: auto;
+      gap: 4px;
+    }
+
+    & [data-action="mute"],
+    & [data-action="solo"] {
+      min-width: 32px;
+      min-height: 32px;
+      padding: 0;
+      font-weight: 600;
+    }
+
+    & [data-action="solo"][aria-pressed="true"] {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--accent-ink);
+    }
+
+    & li:has([data-action="variation"]),
+    & li:has([data-action="remove"]):nth-child(3) {
+      margin-left: 12px;
+    }
+  }
+
+  & > footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 12px;
+    margin-top: 10px;
+
+    & output {
+      flex: 1;
+      min-width: 10em;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    & menu {
+      margin-left: auto;
     }
 
     & button {
       font-size: 13px;
-      padding: 3px 8px;
+      padding: 3px 10px;
     }
   }
 
@@ -376,7 +535,7 @@ article {
     }
   }
 
-  & fieldset:is([data-group="sound"], [data-group="mix"]) > ul {
+  & fieldset:is([data-group="sound"], [data-group="mix"], [data-group="filter"]) > ul {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
     gap: 4px 16px;
@@ -394,10 +553,23 @@ article {
       &:has(:disabled) label {
         color: var(--accent);
       }
+
+      &[data-unused] {
+        opacity: 0.4;
+
+        & label {
+          color: inherit;
+        }
+      }
     }
 
     & select {
       min-width: 0;
+    }
+
+    & li:has(select):is([data-group="filter"] li) {
+      grid-column: 1 / -1;
+      grid-template-columns: 6.5em minmax(0, 14em);
     }
 
     & output {
@@ -411,8 +583,9 @@ article {
     }
 
     & button {
-      font-size: 12px;
-      padding: 2px 8px;
+      min-width: 28px;
+      min-height: 28px;
+      padding: 2px;
     }
   }
 
@@ -440,13 +613,6 @@ article {
     }
   }
 
-  & > output {
-    display: block;
-    min-height: 1.2em;
-    margin-top: 6px;
-    color: var(--muted);
-    font-size: 13px;
-  }
 }
 
 svg {
@@ -520,6 +686,12 @@ svg {
       stroke: var(--ink);
       stroke-width: 2;
     }
+  }
+
+  & path[data-part="shape"] {
+    fill: var(--accent-ink);
+    opacity: 0.55;
+    pointer-events: none;
   }
 }
 

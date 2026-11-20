@@ -242,8 +242,8 @@ export const templates = [
       },
       { name: "hum", keys: { wave: "saw", pitch: 60, lowpass: 300, level: -14 } },
       { name: "vent", keys: { wave: "none", noise: -12, noise_colour: "pink", bandpass: 900, bandpass_q: 1.2, level: -14 } },
-      { name: "clanks", keys: { wave: "none", blips: "0.6 -2 70 160 0.35 -0.4", lowpass: 1500 } },
-      { name: "pings", keys: { wave: "none", blips: "0.4 -12 900 2400 0.7 0" } },
+      { name: "clanks", keys: { wave: "none", crackle: "0.8 0 0.03", drive: 2, highpass: 120, lowpass: 2500, peak_eq: "450 8 3" } },
+      { name: "rattles", keys: { wave: "none", crackle: "1.5 -10 0.006", highpass: 1500, lowpass: 6000 } },
     ],
     controls: [
       {
@@ -257,7 +257,7 @@ export const templates = [
       { id: "vents", label: "Vents", value: 0.6, format: decibels(range(-30, -4)), targets: [{ voice: "vent", key: "level", map: range(-30, -4) }] },
       {
         id: "clanks", label: "Clanks", value: 0.3, format: percent,
-        targets: ["clanks", "pings"].map(voice => ({ voice, key: "density", map: range(0, 3) })),
+        targets: ["clanks", "rattles"].map(voice => ({ voice, key: "density", map: range(0, 3) })),
       },
       { id: "sweep", label: "Sweep speed", value: 0.4, format: percent, targets: [] },
     ],
@@ -554,10 +554,23 @@ export const templates = [
   },
 ];
 
+export const filterLow = exponential(20, 5000);
+export const filterHigh = exponential(200, 20000);
+
 export const mixerControls = [
   { id: "volume", label: "Volume", value: 40 / 46, format: value => `${(value * 46 - 40).toFixed(1)} dB` },
   { id: "reverb", label: "Reverb", value: 0.5, format: percent },
+  {
+    id: "filter", label: "Type", kind: "choice", value: 0, automatable: false,
+    options: [[0, "Off"], [1, "Low pass"], [2, "High pass"], [3, "Band pass"]],
+  },
+  { id: "filterLow", label: "Low cut", value: 0, format: hertz(filterLow) },
+  { id: "filterHigh", label: "High cut", value: 1, format: hertz(filterHigh) },
 ];
+
+export function filterUses(type, id) {
+  return (id === "filterLow" && (type === 2 || type === 3)) || (id === "filterHigh" && (type === 1 || type === 3));
+}
 
 export function volumeToGain(value) {
   return Math.pow(10, (value * 46 - 40) / 20);
