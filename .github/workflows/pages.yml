@@ -21,6 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: sudo apt-get update && sudo apt-get install -y zlib1g-dev zip
+      - uses: mymindstorm/setup-emsdk@v16
       - run: ./site/build.sh
       - if: github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v6

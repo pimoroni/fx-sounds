@@ -13,6 +13,9 @@ struct Envelope {
 
     double period() const;
     double at(double t) const;
+    bool empty() const;
+    bool constant() const;
+    double highest() const;
 };
 
 enum class NoiseColour { White, Pink, Brown };
@@ -34,8 +37,8 @@ struct Voice {
     double sequence_high = 0.0;
     double sequence_duty = 1.0;
     double gate_slew = 0.003;
-    double level_db = 0.0;
-    double noise = 0.0;
+    Envelope level;
+    Envelope noise;
     NoiseColour noise_colour = NoiseColour::White;
     double noise_mod = 0.0;
     double crackle_density = 0.0;
@@ -51,13 +54,16 @@ struct Voice {
     int engine_cylinders = 0;
     double engine_roughness = 0.0;
     double engine_rasp = 0.0;
+    Envelope rpm;
+    Envelope roughness;
+    Envelope density;
     double babble_rate = 0.0;
     double babble_level = 0.0;
     double drive = 0.0;
-    double highpass = 0.0;
-    double lowpass = 0.0;
+    Envelope highpass;
+    Envelope lowpass;
     Envelope bandpass;
-    double bandpass_q = 4.0;
+    Envelope bandpass_q;
     double peak_freq = 0.0;
     double peak_gain_db = 0.0;
     double peak_q = 1.0;
@@ -78,10 +84,12 @@ struct Sound {
     std::string description;
     double length = 0.0;
     int rate = 44100;
+    int oversampling = 8;
     double peak_db = -1.0;
     std::optional<double> loudness_db;
     ReverbSettings reverb;
     std::vector<Voice> voices;
 };
 
+std::vector<Sound> parse_patches(const std::string &text, const std::string &source);
 std::vector<Sound> load_patches(const std::string &path);

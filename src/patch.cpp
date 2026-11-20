@@ -1,5 +1,6 @@
 #include "patch.h"
 
+#include <algorithm>
 #include <cmath>
 #include <fstream>
 #include <map>
@@ -9,6 +10,21 @@
 double Envelope::period() const
 {
     return times.empty() ? 0.0 : times.back();
+}
+
+bool Envelope::empty() const
+{
+    return values.empty();
+}
+
+bool Envelope::constant() const
+{
+    return values.size() <= 1;
+}
+
+double Envelope::highest() const
+{
+    return values.empty() ? 0.0 : *std::max_element(values.begin(), values.end());
 }
 
 double Envelope::at(double t) const
@@ -26,10 +42,8 @@ double Envelope::at(double t) const
         position += length;
     }
 
-    size_t segment = 0;
-    while (segment + 2 < times.size() && times[segment + 1] <= position) {
-        segment++;
-    }
+    auto after = std::upper_bound(times.begin(), times.end() - 1, position);
+    size_t segment = after == times.begin() ? 0 : size_t(after - times.begin()) - 1;
 
     double start = times[segment];
     double end = times[segment + 1];
@@ -202,6 +216,8 @@ bool apply_sound_key(Sound &sound, const std::string &key, const std::string &va
         sound.description = value;
     } else if (key == "length") {
         sound.length = parse_number(value);
+    } else if (key == "oversampling") {
+        sound.oversampling = int(parse_number(value));
     } else if (key == "rate") {
         sound.rate = int(parse_number(value));
     } else if (key == "loudness") {
@@ -259,9 +275,13 @@ void apply_voice_key(Voice &voice, const std::string &key, const std::string &va
     } else if (key == "gate_slew") {
         voice.gate_slew = parse_number(value);
     } else if (key == "level") {
-        voice.level_db = parse_number(value);
+        voice.level = parse_envelope(value, Curve::Linear);
     } else if (key == "noise") {
-        voice.noise = value == "off" ? 0.0 : std::pow(10.0, parse_number(value) / 20.0);
+        voice.noise = value == "off" ? Envelope() : parse_envelope(value, Curve::Linear);
+    } else if (key == "density") {
+        voice.density = parse_envelope(value, Curve::Linear);
+    } else if (key == "rpm") {
+        voice.rpm = value == "off" ? Envelope() : parse_envelope(value, Curve::Log);
     } else if (key == "noise_colour") {
         voice.noise_colour = parse_noise_colour(value);
     } else if (key == "blips" && value == "off") {
@@ -293,7 +313,9 @@ void apply_voice_key(Voice &voice, const std::string &key, const std::string &va
     } else if (key == "bandpass") {
         voice.bandpass = parse_envelope(value, Curve::Log);
     } else if (key == "bandpass_q") {
-        voice.bandpass_q = parse_number(value);
+        voice.bandpass_q = parse_envelope(value, Curve::Log);
+    } else if (key == "roughness") {
+        voice.roughness = value == "off" ? Envelope() : parse_envelope(value, Curve::Linear);
     } else if (key == "noise_mod") {
         voice.noise_mod = parse_number(value);
     } else if (key == "crackle" && value == "off") {
@@ -306,9 +328,9 @@ void apply_voice_key(Voice &voice, const std::string &key, const std::string &va
     } else if (key == "drive") {
         voice.drive = parse_number(value);
     } else if (key == "highpass") {
-        voice.highpass = parse_number(value);
+        voice.highpass = parse_envelope(value, Curve::Log);
     } else if (key == "lowpass") {
-        voice.lowpass = parse_number(value);
+        voice.lowpass = parse_envelope(value, Curve::Log);
     } else if (key == "peak_eq") {
         std::vector<double> numbers = parse_numbers(value, 3);
         voice.peak_freq = numbers[0];
@@ -324,8 +346,11 @@ void validate(const Sound &sound)
     if (sound.rate < 8000 || sound.rate > 192000) {
         throw ParseError(sound.name + ": rate must be 8000 to 192000");
     }
-    if (sound.length < 0.0 || sound.length > 60.0) {
-        throw ParseError(sound.name + ": length must be 0 to 60 seconds");
+    if (sound.length < 0.0 || sound.length > 600.0) {
+        throw ParseError(sound.name + ": length must be 0 to 600 seconds");
+    }
+    if (sound.oversampling < 1 || sound.oversampling > 16) {
+        throw ParseError(sound.name + ": oversampling must be 1 to 16");
     }
     if (sound.reverb.time <= 0.0 || sound.reverb.width <= 0.0) {
         throw ParseError(sound.name + ": reverb_time and reverb_width must be greater than 0");
@@ -358,12 +383,32 @@ void validate(const Sound &sound)
                                        voice.engine_roughness < 0.0 || voice.engine_roughness > 1.0)) {
             throw ParseError(sound.name + "." + voice.name + ": engine needs 1 to 16 cylinders and roughness 0 to 1");
         }
-        if (voice.babble_rate < 0.0 || voice.bandpass_q <= 0.0) {
-            throw ParseError(sound.name + "." + voice.name + ": babble rate must be >= 0 and bandpass_q > 0");
+        if (voice.babble_rate < 0.0) {
+            throw ParseError(sound.name + "." + voice.name + ": babble rate must be >= 0");
+        }
+        for (double q : voice.bandpass_q.values) {
+            if (q <= 0.0) {
+                throw ParseError(sound.name + "." + voice.name + ": bandpass_q must be greater than 0");
+            }
+        }
+        for (double roughness : voice.roughness.values) {
+            if (roughness < 0.0 || roughness > 1.0) {
+                throw ParseError(sound.name + "." + voice.name + ": roughness must be 0 to 1");
+            }
         }
         for (double frequency : voice.bandpass.values) {
             if (frequency <= 0.0) {
                 throw ParseError(sound.name + "." + voice.name + ": bandpass frequencies must be greater than 0");
+            }
+        }
+        for (double multiplier : voice.density.values) {
+            if (multiplier < 0.0) {
+                throw ParseError(sound.name + "." + voice.name + ": density must not be negative");
+            }
+        }
+        for (const Envelope *envelope : {&voice.rpm, &voice.highpass, &voice.lowpass}) {
+            if (!envelope->constant() && *std::min_element(envelope->values.begin(), envelope->values.end()) <= 0.0) {
+                throw ParseError(sound.name + "." + voice.name + ": rpm and filter envelopes must stay above 0");
             }
         }
     }
@@ -377,7 +422,14 @@ std::vector<Sound> load_patches(const std::string &path)
     if (!file) {
         throw std::runtime_error("cannot open " + path);
     }
+    std::ostringstream text;
+    text << file.rdbuf();
+    return parse_patches(text.str(), path);
+}
 
+std::vector<Sound> parse_patches(const std::string &text, const std::string &path)
+{
+    std::istringstream file(text);
     std::vector<Sound> sounds;
     Voice *voice = nullptr;
     std::string line;

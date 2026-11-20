@@ -4,29 +4,25 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>FX Sounds</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@300..700&display=swap">
 <style>
   :root {
-    color-scheme: light dark;
-    --ground: #f4f3ef;
-    --card: #ffffff;
-    --ink: #1c1b19;
-    --muted: #6b6862;
-    --line: #dedbd3;
-    --accent: #c8322b;
-    --accent-ink: #ffffff;
-    --trace: #c8322b;
+    color-scheme: dark;
+    --ground: #101520;
+    --card: #161d2b;
+    --ink: rgb(235, 245, 255);
+    --muted: rgb(160, 172, 186);
+    --line: rgba(150, 180, 255, 0.16);
+    --accent: rgb(255, 86, 244);
+    --accent-ink: rgb(255, 255, 255);
+    --trace: rgb(255, 86, 244);
+    --wash:
+      radial-gradient(56rem 40rem at calc(50% + 12rem) 6rem, rgba(255, 86, 244, 0.15), transparent 60%),
+      radial-gradient(48rem 34rem at 2% 8rem, rgba(70, 150, 230, 0.16), transparent 60%),
+      radial-gradient(72rem 30rem at 50% -6rem, rgba(160, 90, 220, 0.28), transparent 70%);
     scroll-behavior: smooth;
-
-    @media (prefers-color-scheme: dark) {
-      --ground: #141413;
-      --card: #1e1e1c;
-      --ink: #eeece6;
-      --muted: #9c998f;
-      --line: #34332f;
-      --accent: #ff5a4f;
-      --accent-ink: #141413;
-      --trace: #ff7a70;
-    }
 
     @media (prefers-reduced-motion: reduce) {
       scroll-behavior: auto;
@@ -40,9 +36,10 @@
   body {
     margin: 0;
     padding: 0 16px 64px;
-    background: var(--ground);
+    background: var(--wash), var(--ground);
+    background-repeat: no-repeat;
     color: var(--ink);
-    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font: 300 15px/1.5 "Lexend", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 
     & > * {
       max-width: 1180px;
@@ -55,7 +52,8 @@
       & h1 {
         margin: 0 0 8px;
         font-size: clamp(28px, 5vw, 44px);
-        letter-spacing: -0.02em;
+        font-weight: 400;
+        letter-spacing: -0.01em;
       }
 
       & p {
@@ -70,8 +68,8 @@
 
       & a[download] {
         display: inline-block;
-        padding: 10px 18px;
-        border-radius: 6px;
+        padding: 0.7rem 1.5rem;
+        border-radius: 2rem;
         background: var(--accent);
         color: var(--accent-ink);
         font-weight: 600;
@@ -344,8 +342,8 @@
 <body>
 <header>
   <h1>FX Sounds</h1>
-  <p>Seamless sirens, sci-fi sounders, smoke alarms, sizzling fires, spluttering engines and soothing soundscapes. Every sound loops seamlessly and comes dry or with reverb. Made for use with <a href="https://shop.pimoroni.com/collections/tiny-fx">Tiny FX</a> and <a href="https://shop.pimoroni.com/collections/yukon">Yukon</a>.</p>
-  <p><a href="fx-sounds.zip" download>Download the whole pack (.zip)</a></p>
+  <p>Seamless sirens, sci-fi sounders, smoke alarms, sizzling fires, spluttering engines and soothing soundscapes. Every sound loops seamlessly and comes dry or with reverb. Made for use with <a href="https://shop.pimoroni.com/collections/tiny-fx">Tiny FX</a>, <a href="https://shop.pimoroni.com/collections/yukon">Yukon</a> and <a href="https://shop.pimoroni.com/products/explorer">Explorer</a>.</p>
+  <p><a href="fx-sounds.zip" download>Download the whole pack (.zip)</a> or <a href="studio/">open the Studio</a> to design your own.</p>
   <p><small>Spectrograms show the whole loop, 40 Hz to 16 kHz on a log scale. The trace below each shows 20 ms of the loudest part.</small></p>
 </header>
 <nav aria-label="Sections">
@@ -397,6 +395,7 @@
     signals: "Signals",
     phones: "Telephone tones",
     electric: "Electricity",
+    clips: "Clips",
     engines: "Engines",
     ambience: "Ambience",
     roomtone: "Room tone",

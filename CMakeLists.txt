@@ -8,10 +8,31 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-add_library(fxcore STATIC
+set(ENGINE_SOURCES
   src/patch.cpp
   src/synth.cpp
   src/reverb.cpp
+)
+
+if(EMSCRIPTEN)
+  add_executable(fxengine src/wasm.cpp ${ENGINE_SOURCES})
+  target_include_directories(fxengine PRIVATE src)
+  target_compile_options(fxengine PRIVATE -Wall -Wextra -fexceptions)
+  target_link_options(fxengine PRIVATE
+    -lembind
+    -fexceptions
+    -sMODULARIZE=1
+    -sEXPORT_ES6=1
+    -sEXPORT_NAME=createEngine
+    -sENVIRONMENT=web,worker,node
+    -sALLOW_MEMORY_GROWTH=1
+    -sMAXIMUM_MEMORY=4GB
+  )
+  return()
+endif()
+
+add_library(fxcore STATIC
+  ${ENGINE_SOURCES}
   src/wav.cpp
   src/preview.cpp
 )

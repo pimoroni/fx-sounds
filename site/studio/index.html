@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FX Sounds Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@300..700&display=swap">
+<link rel="stylesheet" href="studio.css">
+<script type="module" src="js/main.js"></script>
+</head>
+<body data-mode="loop">
+<header>
+  <h1>FX Sounds Studio</h1>
+  <p>Design looping and evolving soundscapes for models, dioramas, props and costumes. Layer up to four sounds, shape them over time and export a WAV.</p>
+  <nav aria-label="Site">
+    <ul>
+      <li><a href="../">Sound gallery</a></li>
+      <li><a href="https://github.com/pimoroni/fx-sounds">Source</a></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+  <section aria-labelledby="project-heading">
+    <h2 id="project-heading">Project</h2>
+    <form id="project-form">
+      <label>Name <input id="project-name" value="Untitled" autocomplete="off"></label>
+      <fieldset>
+        <legend>Mode</legend>
+        <label><input type="radio" name="mode" value="loop" checked>Looping</label>
+        <label><input type="radio" name="mode" value="evolve">Evolving</label>
+      </fieldset>
+      <label>Length <input id="project-length" type="number" min="0.5" max="120" step="0.1" value="8"> s</label>
+      <label data-evolve>Fade in <input id="fade-in" type="number" min="0" max="30" step="0.1" value="0"> s</label>
+      <label data-evolve>Fade out <input id="fade-out" type="number" min="0" max="30" step="0.1" value="0"> s</label>
+    </form>
+    <menu aria-label="Transport">
+      <li><button type="button" id="play" aria-pressed="false">Play</button></li>
+      <li data-evolve><label><input type="checkbox" id="loop-playback" checked>Loop</label></li>
+      <li><button type="button" id="export">Export WAV</button></li>
+      <li><button type="button" id="save-project">Save project</button></li>
+      <li><button type="button" id="new-project">New project</button></li>
+    </menu>
+    <figure id="overview">
+      <canvas aria-label="Mix overview"></canvas>
+      <figcaption><output id="status" aria-live="polite">Add a sound from the palette to start.</output></figcaption>
+    </figure>
+  </section>
+
+  <section aria-labelledby="layers-heading">
+    <h2 id="layers-heading">Layers</h2>
+    <p id="layers-hint">Up to four layers. Add sounds and clips from the palette.</p>
+    <ol id="layers"></ol>
+  </section>
+
+  <section aria-labelledby="monitor-heading">
+    <h2 id="monitor-heading">Monitor</h2>
+    <figure>
+      <canvas id="spectrum" aria-label="Live spectrum"></canvas>
+      <figcaption>Spectrum, 30 Hz to 16 kHz</figcaption>
+    </figure>
+    <figure>
+      <canvas id="waveform" aria-label="Live waveform"></canvas>
+      <figcaption>Waveform</figcaption>
+    </figure>
+  </section>
+</main>
+
+<aside aria-labelledby="palette-heading">
+  <h2 id="palette-heading">Palette</h2>
+  <section aria-labelledby="sounds-heading">
+    <h3 id="sounds-heading">Sounds</h3>
+    <p>Synthesised and fully adjustable.</p>
+    <ul id="template-groups"></ul>
+  </section>
+  <section aria-labelledby="clips-heading">
+    <h3 id="clips-heading">Clips</h3>
+    <p>Ready-made sounds from the gallery to place over the top.</p>
+    <ul id="clip-groups"></ul>
+  </section>
+  <section aria-labelledby="my-sounds-heading">
+    <h3 id="my-sounds-heading">My sounds</h3>
+    <ul id="saved-sounds"></ul>
+  </section>
+  <section aria-labelledby="my-projects-heading">
+    <h3 id="my-projects-heading">My projects</h3>
+    <ul id="saved-projects"></ul>
+  </section>
+</aside>
+
+<dialog id="name-dialog">
+  <form method="dialog">
+    <h2>Save</h2>
+    <label>Name <input name="name" required autocomplete="off"></label>
+    <menu>
+      <li><button value="save">Save</button></li>
+      <li><button value="cancel" formnovalidate>Cancel</button></li>
+    </menu>
+  </form>
+</dialog>
+
+<template id="synth-layer">
+  <li>
+    <article>
+      <header>
+        <h3></h3>
+        <p></p>
+        <menu aria-label="Layer actions">
+          <li><button type="button" data-action="mute" aria-pressed="false">Mute</button></li>
+          <li><button type="button" data-action="solo" aria-pressed="false">Solo</button></li>
+          <li><button type="button" data-action="variation">New variation</button></li>
+          <li><button type="button" data-action="save">Save sound</button></li>
+          <li><button type="button" data-action="patch">Download .ini</button></li>
+          <li><button type="button" data-action="remove">Remove</button></li>
+        </menu>
+      </header>
+      <fieldset data-group="sound">
+        <legend>Sound</legend>
+      </fieldset>
+      <fieldset data-group="mix">
+        <legend>Mix</legend>
+      </fieldset>
+      <section data-evolve aria-label="Shape over time">
+        <label>Shape over time <select data-role="focus"></select></label>
+        <button type="button" data-action="flatten">Flatten</button>
+        <figure data-role="automation"></figure>
+      </section>
+      <output data-role="status" aria-live="polite"></output>
+    </article>
+  </li>
+</template>
+
+<template id="clip-layer">
+  <li>
+    <article>
+      <header>
+        <h3></h3>
+        <p>Clip</p>
+        <menu aria-label="Layer actions">
+          <li><button type="button" data-action="mute" aria-pressed="false">Mute</button></li>
+          <li><button type="button" data-action="solo" aria-pressed="false">Solo</button></li>
+          <li><button type="button" data-action="remove">Remove</button></li>
+        </menu>
+      </header>
+      <fieldset data-group="clip">
+        <legend>Clip</legend>
+        <label><input type="checkbox" data-role="loop">Loop</label>
+        <label>Fade in <input type="number" data-role="fade-in" min="0" max="30" step="0.05" value="0"> s</label>
+        <label>Fade out <input type="number" data-role="fade-out" min="0" max="30" step="0.05" value="0"> s</label>
+      </fieldset>
+      <fieldset data-group="mix">
+        <legend>Mix</legend>
+      </fieldset>
+      <figure data-role="placements">
+        <figcaption>Click the strip to place the clip, drag to move it, double-click or press Delete to remove it.</figcaption>
+      </figure>
+      <section data-evolve aria-label="Shape over time">
+        <label>Shape over time <select data-role="focus"></select></label>
+        <button type="button" data-action="flatten">Flatten</button>
+        <figure data-role="automation"></figure>
+      </section>
+      <output data-role="status" aria-live="polite"></output>
+    </article>
+  </li>
+</template>
+</body>
+</html>
